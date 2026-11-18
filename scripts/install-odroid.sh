@@ -10,7 +10,7 @@ REPO="faisalfa123/bugar"
 INSTALL_BIN="/usr/local/bin/bugar"
 DATA_DIR="/var/lib/bugar"
 SERVICE_FILE="/etc/systemd/system/bugar.service"
-DEFAULT_PORT=8080
+DEFAULT_PORT=1200
 
 echo "=========================================================="
 echo "  🏋️ BUGAR - Edge Fitness & Nutrition Server Installer"

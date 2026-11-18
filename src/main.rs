@@ -32,7 +32,7 @@ struct DistAsset;
 )]
 pub struct Args {
     /// Port to listen on (supports both --port, -p, and -port from Mastermind)
-    #[arg(short = 'p', long = "port", default_value_t = 8080, env = "PORT")]
+    #[arg(short = 'p', long = "port", default_value_t = 1200, env = "PORT")]
     pub port: u16,
 
     /// Path to SQLite database file
@@ -48,10 +48,48 @@ pub struct Args {
     pub hdd_dir: String,
 }
 
+fn resolve_db_path(configured_path: &str, hdd_dir: &str) -> std::path::PathBuf {
+    let p = std::path::Path::new(configured_path);
+    // If an explicit absolute path is provided, use it directly
+    if p.is_absolute() {
+        return p.to_path_buf();
+    }
+
+    // 1. Check systemd $STATE_DIRECTORY (set automatically by systemd StateDirectory=mastermind/bugar)
+    if let Ok(state_dir) = std::env::var("STATE_DIRECTORY") {
+        if !state_dir.is_empty() {
+            return std::path::Path::new(&state_dir).join("bugar.db");
+        }
+    }
+
+    // 2. Check /var/lib/mastermind/bugar
+    let mm_state = std::path::Path::new("/var/lib/mastermind/bugar");
+    if mm_state.exists() {
+        return mm_state.join("bugar.db");
+    }
+
+    // 3. Test if current directory is writable
+    let test_file = std::path::Path::new(".write_test_probe");
+    if let Ok(f) = std::fs::OpenOptions::new().write(true).create(true).open(test_file) {
+        drop(f);
+        let _ = std::fs::remove_file(test_file);
+        return p.to_path_buf();
+    }
+
+    // 4. Check if external HDD dir exists
+    let hdd_path = std::path::Path::new(hdd_dir);
+    if hdd_path.exists() {
+        return hdd_path.join("bugar.db");
+    }
+
+    // 5. Fallback to /tmp
+    std::path::PathBuf::from("/tmp/bugar.db")
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Normalize arguments: Mastermind passes single-dash flags like "-port 8080" or "-db /path"
-    // We rewrite them to double-dash standard flags "--port 8080" before Clap parses them.
+    // Normalize arguments: Mastermind passes single-dash flags like "-port 1200" or "-db /path"
+    // We rewrite them to double-dash standard flags "--port 1200" before Clap parses them.
     let raw_args: Vec<String> = std::env::args().collect();
     let normalized_args: Vec<String> = raw_args
         .into_iter()
@@ -73,17 +111,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
 
     let args = Args::parse_from(normalized_args);
+    let db_path = resolve_db_path(&args.db, &args.hdd_dir);
 
     println!("==========================================================");
     println!("  🏋️ BUGAR Edge Server v{}", env!("CARGO_PKG_VERSION"));
     println!("  Arsitektur : {}", std::env::consts::ARCH);
     println!("  Port Server: {}", args.port);
-    println!("  Database   : {}", args.db);
+    println!("  Database   : {}", db_path.display());
     println!("  Backup HDD : {}", args.hdd_dir);
     println!("==========================================================");
 
     // Initialize Database
-    let mut database = Database::open(&args.db)
+    let mut database = Database::open(&db_path)
         .map_err(|e| format!("Gagal menginisialisasi SQLite database: {:?}", e))?;
     println!("✅ SQLite database siap (WAL Mode, synchronous NORMAL).");
 

@@ -494,7 +494,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             type="text"
             value={serverUrl}
             onChange={(e) => setServerUrl(e.target.value)}
-            placeholder="http://192.168.1.100:8080"
+            placeholder="http://192.168.1.100:1200"
             className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500"
           />
           <button

@@ -1,6 +1,6 @@
 [package]
 name = "bugar"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Faisal <faisal@bugar.local>"]
 description = "All-in-One Fitness, Nutrition & Fat Burner Edge Server for ODROID-C2 (ARM64)"

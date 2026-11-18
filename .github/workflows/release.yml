@@ -89,6 +89,7 @@ jobs:
             curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install-odroid.sh | sudo bash
             ```
           prerelease: false
+          make_latest: true
           files: |
             dist/bugar-linux-arm64
             dist/checksums.txt

@@ -6,8 +6,8 @@ language = "rust"
 description = "Aplikasi kesehatan, kebugaran, pola makan, dan fat burner all-in-one"
 
 [run]
-port = 8080
-args = ["--port", "8080", "--hdd-dir", "/mnt/hdd1/bugar"]
+port = 1200
+args = ["--port", "1200", "--hdd-dir", "/mnt/hdd1/bugar"]
 priority = 40
 
 [limits]
@@ -16,7 +16,7 @@ cpu_quota_pct = 50
 tasks_max = 64
 
 [permissions]
-paths_rw = ["/mnt/hdd1/bugar"]
+paths_rw = ["/mnt/hdd1/bugar", "/var/lib/mastermind/bugar"]
 paths_ro = []
 outbound = []
 tools = []
