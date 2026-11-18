@@ -285,6 +285,23 @@ impl Database {
         Ok(count)
     }
 
+    /// Clean overwrite all tables with provided snapshot
+    pub fn replace_full_snapshot(&mut self, payload: &SyncPayload) -> Result<usize> {
+        let tx = self.conn.transaction()?;
+        tx.execute_batch(
+            "DELETE FROM user_profiles;
+             DELETE FROM food_logs;
+             DELETE FROM workout_logs;
+             DELETE FROM cardio_logs;
+             DELETE FROM fat_burner_logs;
+             DELETE FROM body_metric_logs;
+             DELETE FROM daily_habit_logs;"
+        )?;
+        tx.commit()?;
+
+        self.apply_sync_payload(payload)
+    }
+
     /// Retrieve complete snapshot of user data
     pub fn get_full_snapshot(&self) -> Result<SyncPayload> {
         let mut payload = SyncPayload {

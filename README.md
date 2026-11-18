@@ -175,7 +175,33 @@ cargo build --release
 
 ---
 
-## 🔒 Konfigurasi Keamanan Opsional (`BUGAR_PIN`)
+## 💾 Penyimpanan Eksternal & Disaster Recovery (`/mnt/hdd1/bugar/`)
+
+Untuk memastikan data kebugaran dan konfigurasi pribadi Anda aman dari kerusakan kartu SD atau kegagalan sistem, BUGAR otomatis menyinkronkan data ke media penyimpanan eksternal `/mnt/hdd1/bugar/`:
+
+### Berkas yang Tersimpan di `/mnt/hdd1/bugar/`:
+1. **`config.json`**: Pengaturan profil pribadi, usia, tinggi, berat, dan target kalori/makro dalam format JSON yang rapi (*human-readable/writable*). Anda dapat melihat dan mengubahnya secara manual jika diperlukan.
+2. **`backup_latest.json`**: Cadangan lengkap seluruh database (jurnal makan, rekam gym, fat burner, dan metrik kesehatan) dalam format JSON terstruktur.
+3. **`data_overview.txt`**: Ringkasan teks biasa yang dapat langsung dibaca di terminal dengan perintah `cat /mnt/hdd1/bugar/data_overview.txt` atau `nano`.
+4. **`exports/`**: Direktori yang menampung arsip cadangan bertanggal otomatis (`backup_YYYYMMDD_HHMMSS.json`).
+
+### 🔄 Otomatisasi Pemulihan Bencana (Auto-Recovery)
+Jika database internal `/var/lib/...` atau sistem ODROID-C2 terformat/rusak, cukup instal kembali BUGAR. Saat pertama kali dijalankan dan mendeteksi database kosong, BUGAR akan **secara otomatis memulihkan seluruh data** dari `/mnt/hdd1/bugar/backup_latest.json`.
+
+### 📦 Ekspor & Impor Berkas via Web UI
+- **Ekspor:** Buka menu **Pengaturan** -> Klik **"Ekspor File (.json)"** untuk mengunduh berkas cadangan langsung ke browser HP atau komputer Anda.
+- **Impor:** Buka menu **Pengaturan** -> Klik **"Impor File (.json)"** -> Pilih opsi **"Gabungkan (Merge LWW)"** atau **"Timpa Bersih (Clean Replace)"** untuk memulihkan data kapan pun.
+
+---
+
+## 🛡️ Integrasi Mastermind Sandbox (`bugar.batasan.toml`)
+
+BUGAR menyediakan berkas konfigurasi resmi `bugar.batasan.toml` yang kompatibel dengan **App Manager Mastermind** (`faisalfa123/mastermind`):
+- Alokasi memori terkendali: `memory_max_mb = 96`
+- Kuota CPU: `cpu_quota_pct = 50`
+- Izin filesystem jail: `paths_rw = ["/mnt/hdd1/bugar"]` (memberikan akses tulis penuh ke hard disk eksternal di dalam sandbox systemd).
+
+---
 
 Jika server ODROID-C2 dapat diakses dari jaringan publik, aktifkan perlindungan PIN akses:
 

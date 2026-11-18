@@ -86,6 +86,13 @@ install -m 755 "$TMP_DIR/bugar-linux-arm64" "$INSTALL_BIN"
 mkdir -p "$DATA_DIR"
 chmod 750 "$DATA_DIR"
 
+# Ensure /mnt/hdd1/bugar is prepared if /mnt/hdd1 is mounted
+HDD_DIR="/mnt/hdd1/bugar"
+if [ -d "/mnt/hdd1" ]; then
+    mkdir -p "$HDD_DIR"
+    chmod 775 "$HDD_DIR" || true
+fi
+
 # Generate systemd unit file
 echo "⚙️ Menyiapkan systemd service ($SERVICE_FILE)..."
 cat <<EOF > "$SERVICE_FILE"
@@ -95,7 +102,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=${INSTALL_BIN} --port ${DEFAULT_PORT} --db ${DATA_DIR}/bugar.db
+ExecStart=${INSTALL_BIN} --port ${DEFAULT_PORT} --db ${DATA_DIR}/bugar.db --hdd-dir ${HDD_DIR}
 WorkingDirectory=${DATA_DIR}
 Restart=always
 RestartSec=5s

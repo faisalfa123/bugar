@@ -167,6 +167,68 @@ class SyncService {
       this.notify();
     }
   }
+
+  async getHddStatus(): Promise<import('../types').HddStatus | null> {
+    try {
+      const res = await fetch(`${this.serverUrl}/api/hdd/status`, {
+        headers: { 'Accept': 'application/json' },
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('Error fetching HDD status:', e);
+    }
+    return null;
+  }
+
+  async triggerHddBackup(): Promise<{ success: boolean; message: string }> {
+    try {
+      const token = this.getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`${this.serverUrl}/api/hdd/backup`, {
+        method: 'POST',
+        headers,
+      });
+
+      if (res.ok) {
+        return { success: true, message: 'Cadangan data berhasil disimpan ke /mnt/hdd1/bugar/' };
+      }
+      return { success: false, message: `Gagal menulis cadangan ke HDD (HTTP ${res.status})` };
+    } catch (e) {
+      return { success: false, message: 'Tidak dapat menghubungi server ODROID-C2' };
+    }
+  }
+
+  async importBackupPayload(
+    payload: SyncPayload,
+    replaceAll: boolean
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const token = this.getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`${this.serverUrl}/api/backup/import`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          replace_all: replaceAll,
+          payload,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        return { success: true, message: data.message };
+      }
+      return { success: false, message: data.message || 'Gagal memproses file backup' };
+    } catch (e) {
+      return { success: false, message: 'Gagal menghubungi server untuk impor backup' };
+    }
+  }
 }
 
 export const syncService = new SyncService();

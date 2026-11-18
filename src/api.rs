@@ -12,18 +12,20 @@ use std::{
 };
 
 use crate::db::Database;
+use crate::hdd::{HddManager, HddStatus};
 use crate::mastermind::MastermindSolver;
 use crate::models::*;
 
 #[derive(Clone)]
 pub struct AppState {
     pub db: Arc<Mutex<Database>>,
+    pub hdd: HddManager,
     pub start_time: Instant,
     pub pin_hash: Option<String>,
 }
 
 impl AppState {
-    pub fn new(db: Database) -> Self {
+    pub fn new(db: Database, hdd_path: &str) -> Self {
         let pin_hash = std::env::var("BUGAR_PIN")
             .ok()
             .filter(|p| !p.trim().is_empty())
@@ -35,6 +37,7 @@ impl AppState {
 
         Self {
             db: Arc::new(Mutex::new(db)),
+            hdd: HddManager::new(hdd_path),
             start_time: Instant::now(),
             pin_hash,
         }
@@ -47,7 +50,6 @@ impl AppState {
         if let Some(auth) = headers.get(header::AUTHORIZATION) {
             if let Ok(val) = auth.to_str() {
                 if let Some(token) = val.strip_prefix("Bearer ") {
-                    // Check against current pin hash
                     if let Some(ref expected) = self.pin_hash {
                         return token == expected;
                     }
@@ -156,12 +158,19 @@ pub async fn sync_post_handler(
     })?;
 
     match db.apply_sync_payload(&payload) {
-        Ok(count) => Ok(Json(SyncResponse {
-            success: true,
-            server_timestamp: chrono::Utc::now().timestamp_millis(),
-            applied_count: count,
-            message: format!("Berhasil sinkronisasi {} entitas.", count),
-        })),
+        Ok(count) => {
+            // Mirror to external HDD (/mnt/hdd1/bugar) if accessible
+            if let Ok(full_snap) = db.get_full_snapshot() {
+                let _ = state.hdd.write_backup(&full_snap);
+            }
+
+            Ok(Json(SyncResponse {
+                success: true,
+                server_timestamp: chrono::Utc::now().timestamp_millis(),
+                applied_count: count,
+                message: format!("Berhasil sinkronisasi {} entitas.", count),
+            }))
+        }
         Err(e) => {
             eprintln!("Error applying sync payload: {:?}", e);
             Err((StatusCode::INTERNAL_SERVER_ERROR, "Gagal menerapkan sinkronisasi"))
@@ -200,6 +209,9 @@ pub async fn backup_export_handler(
         )
     })?;
 
+    // Also mirror to HDD
+    let _ = state.hdd.write_backup(&snapshot);
+
     let json_bytes = serde_json::to_vec_pretty(&snapshot).map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -228,6 +240,88 @@ pub async fn backup_export_handler(
         })?;
 
     Ok(res)
+}
+
+/// POST /api/backup/import
+pub async fn backup_import_handler(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(req): Json<ImportBackupRequest>,
+) -> Result<Json<SyncResponse>, (StatusCode, &'static str)> {
+    if !state.verify_token(&headers) {
+        return Err((StatusCode::UNAUTHORIZED, "Unauthorized: PIN required"));
+    }
+
+    let mut db = state.db.lock().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database lock failure",
+        )
+    })?;
+
+    let res = if req.replace_all {
+        db.replace_full_snapshot(&req.payload)
+    } else {
+        db.apply_sync_payload(&req.payload)
+    };
+
+    match res {
+        Ok(count) => {
+            // Write to HDD backup directory immediately
+            if let Ok(full_snap) = db.get_full_snapshot() {
+                let _ = state.hdd.write_backup(&full_snap);
+            }
+
+            let mode_str = if req.replace_all { "timpa bersih" } else { "gabungkan" };
+            Ok(Json(SyncResponse {
+                success: true,
+                server_timestamp: chrono::Utc::now().timestamp_millis(),
+                applied_count: count,
+                message: format!("Berhasil memulihkan ({}) {} entitas data.", mode_str, count),
+            }))
+        }
+        Err(e) => {
+            eprintln!("Error importing backup payload: {:?}", e);
+            Err((StatusCode::INTERNAL_SERVER_ERROR, "Gagal memproses file backup"))
+        }
+    }
+}
+
+/// GET /api/hdd/status
+pub async fn hdd_status_handler(State(state): State<AppState>) -> Json<HddStatus> {
+    let status = state.hdd.check_status();
+    Json(status)
+}
+
+/// POST /api/hdd/backup
+pub async fn hdd_backup_now_handler(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<HddStatus>, (StatusCode, &'static str)> {
+    if !state.verify_token(&headers) {
+        return Err((StatusCode::UNAUTHORIZED, "Unauthorized: PIN required"));
+    }
+
+    let db = state.db.lock().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database lock failure",
+        )
+    })?;
+
+    let snapshot = db.get_full_snapshot().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Gagal membaca snapshot database",
+        )
+    })?;
+
+    state.hdd.write_backup(&snapshot).map_err(|e| {
+        eprintln!("Error writing backup to HDD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Gagal menulis backup ke /mnt/hdd1/bugar")
+    })?;
+
+    Ok(Json(state.hdd.check_status()))
 }
 
 /// Helper function to read current process memory from /proc/self/status on Linux

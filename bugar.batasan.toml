@@ -1,0 +1,22 @@
+[app]
+id = "bugar"
+repo = "faisalfa123/bugar"
+asset = "bugar-linux-arm64"
+language = "rust"
+description = "Aplikasi kesehatan, kebugaran, pola makan, dan fat burner all-in-one"
+
+[run]
+port = 8080
+args = ["--port", "8080", "--hdd-dir", "/mnt/hdd1/bugar"]
+priority = 40
+
+[limits]
+memory_max_mb = 96
+cpu_quota_pct = 50
+tasks_max = 64
+
+[permissions]
+paths_rw = ["/mnt/hdd1/bugar"]
+paths_ro = []
+outbound = []
+tools = []

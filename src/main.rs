@@ -1,5 +1,6 @@
 mod api;
 mod db;
+mod hdd;
 mod mastermind;
 mod models;
 
@@ -16,6 +17,7 @@ use tower_http::cors::CorsLayer;
 
 use crate::api::AppState;
 use crate::db::Database;
+use crate::hdd::HddManager;
 
 #[derive(RustEmbed)]
 #[folder = "web/dist/"]
@@ -28,36 +30,70 @@ struct DistAsset;
     version,
     about = "BUGAR: All-in-One Fitness, Nutrition & Fat Burner Edge Server for ODROID-C2 (ARM64)"
 )]
-struct Args {
-    /// Port to listen on
-    #[arg(short, long, default_value_t = 8080, env = "BUGAR_PORT")]
-    port: u16,
+pub struct Args {
+    /// Port to listen on (supports both --port, -p, and -port from Mastermind)
+    #[arg(short = 'p', long = "port", default_value_t = 8080, env = "PORT")]
+    pub port: u16,
 
     /// Path to SQLite database file
-    #[arg(short, long, default_value = "bugar.db", env = "BUGAR_DB_PATH")]
-    db: String,
+    #[arg(short = 'd', long = "db", default_value = "bugar.db", env = "BUGAR_DB_PATH")]
+    pub db: String,
 
     /// Bind host address
-    #[arg(long, default_value = "0.0.0.0", env = "BUGAR_HOST")]
-    host: String,
+    #[arg(long = "host", default_value = "0.0.0.0", env = "BUGAR_HOST")]
+    pub host: String,
+
+    /// External HDD Directory for human-readable backups & configuration
+    #[arg(long = "hdd-dir", default_value = "/mnt/hdd1/bugar", env = "BUGAR_HDD_DIR")]
+    pub hdd_dir: String,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args = Args::parse();
+    // Normalize arguments: Mastermind passes single-dash flags like "-port 8080" or "-db /path"
+    // We rewrite them to double-dash standard flags "--port 8080" before Clap parses them.
+    let raw_args: Vec<String> = std::env::args().collect();
+    let normalized_args: Vec<String> = raw_args
+        .into_iter()
+        .map(|arg| {
+            if arg == "-port" {
+                "--port".to_string()
+            } else if let Some(rest) = arg.strip_prefix("-port=") {
+                format!("--port={}", rest)
+            } else if arg == "-db" {
+                "--db".to_string()
+            } else if let Some(rest) = arg.strip_prefix("-db=") {
+                format!("--db={}", rest)
+            } else if arg == "-hdd-dir" {
+                "--hdd-dir".to_string()
+            } else {
+                arg
+            }
+        })
+        .collect();
+
+    let args = Args::parse_from(normalized_args);
 
     println!("==========================================================");
     println!("  🏋️ BUGAR Edge Server v{}", env!("CARGO_PKG_VERSION"));
     println!("  Arsitektur : {}", std::env::consts::ARCH);
+    println!("  Port Server: {}", args.port);
     println!("  Database   : {}", args.db);
+    println!("  Backup HDD : {}", args.hdd_dir);
     println!("==========================================================");
 
     // Initialize Database
-    let database = Database::open(&args.db)
+    let mut database = Database::open(&args.db)
         .map_err(|e| format!("Gagal menginisialisasi SQLite database: {:?}", e))?;
     println!("✅ SQLite database siap (WAL Mode, synchronous NORMAL).");
 
-    let state = AppState::new(database);
+    // Disaster Recovery Check: If database is empty, check /mnt/hdd1/bugar/backup_latest.json
+    let hdd_manager = HddManager::new(&args.hdd_dir);
+    if hdd_manager.try_recover_empty_db(&mut database) {
+        println!("🎉 Database berhasil dipulihkan dari cadangan HDD: {}", args.hdd_dir);
+    }
+
+    let state = AppState::new(database, &args.hdd_dir);
     if state.pin_hash.is_some() {
         println!("🔒 Proteksi PIN aktif (BUGAR_PIN terdeteksi).");
     } else {
@@ -66,12 +102,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Configure Routes
     let app = Router::new()
-        // API Endpoints
+        // Core API Endpoints
         .route("/api/health", get(api::health_handler))
         .route("/api/auth/verify", post(api::auth_verify_handler))
         .route("/api/sync", get(api::sync_get_handler).post(api::sync_post_handler))
         .route("/api/mastermind/recommend", post(api::mastermind_recommend_handler))
         .route("/api/backup/export", get(api::backup_export_handler))
+        .route("/api/backup/import", post(api::backup_import_handler))
+        // HDD External Storage Endpoints
+        .route("/api/hdd/status", get(api::hdd_status_handler))
+        .route("/api/hdd/backup", post(api::hdd_backup_now_handler))
         .with_state(state)
         // Static assets fallback (rust-embed)
         .fallback(static_asset_handler)
@@ -124,7 +164,7 @@ async fn static_asset_handler(uri: Uri) -> Response {
             .into_response();
     }
 
-    // Placeholder if web/dist hasn't been built yet during dev check
+    // Fallback if web/dist hasn't been built yet during dev check
     Html(
         r#"<!DOCTYPE html>
 <html>

@@ -218,3 +218,11 @@ pub struct AuthVerifyResponse {
     pub token: Option<String>,
     pub message: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImportBackupRequest {
+    #[serde(default)]
+    pub replace_all: bool,
+    pub payload: SyncPayload,
+}
+

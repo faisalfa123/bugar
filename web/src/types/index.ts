@@ -161,6 +161,21 @@ export interface ServerHealth {
   pin_protected: boolean;
 }
 
+export interface HddStatus {
+  path: string;
+  available: boolean;
+  writable: boolean;
+  last_backup_time: number | null;
+  files: string[];
+  backup_size_bytes: number;
+  message: string;
+}
+
+export interface ImportBackupRequest {
+  replace_all: boolean;
+  payload: SyncPayload;
+}
+
 export interface MastermindRecommendation {
   recommended_foods: {
     name: string;
