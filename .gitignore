@@ -1,0 +1,22 @@
+# Rust build artifacts
+target/
+**/*.rs.bk
+
+# Web build artifacts
+web/node_modules/
+web/dist/
+web/.env.local
+
+# Release artifacts
+dist/
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+*.db
+*.db-wal
+*.db-shm

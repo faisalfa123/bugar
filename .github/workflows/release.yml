@@ -1,0 +1,94 @@
+name: Release ARM64 Binary
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build Frontend & Cross-Compile ARM64
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'web/package-lock.json'
+
+      - name: Build Web Client (PWA)
+        run: |
+          cd web
+          npm ci
+          npm run build
+        env:
+          CI: true
+
+      - name: Setup Rust Stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: 0.13.0
+
+      - name: Install cargo-zigbuild
+        run: |
+          pip install --user cargo-zigbuild
+
+      - name: Cross-compile Rust for ARM64 (ODROID-C2)
+        run: |
+          cargo zigbuild --release --target aarch64-unknown-linux-gnu
+
+      - name: Prepare Artifacts & Checksums
+        run: |
+          mkdir -p dist
+          cp target/aarch64-unknown-linux-gnu/release/bugar dist/bugar-linux-arm64
+          chmod +x dist/bugar-linux-arm64
+          cd dist
+          sha256sum bugar-linux-arm64 > checksums.txt
+          cat checksums.txt
+
+      - name: Publish GitHub Release (Tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/bugar-linux-arm64
+            dist/checksums.txt
+          generate_release_notes: true
+
+      - name: Publish or Update 'latest' Release (main branch)
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "BUGAR Edge Server (Latest Build)"
+          body: |
+            Automated production build for ODROID-C2 (ARM64).
+            Built from commit ${{ github.sha }}.
+
+            ### Installation:
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install-odroid.sh | sudo bash
+            ```
+          prerelease: false
+          files: |
+            dist/bugar-linux-arm64
+            dist/checksums.txt
