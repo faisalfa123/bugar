@@ -26,6 +26,23 @@ interface NutritionPageProps {
   onAddCustomFood: (food: FoodItem) => void;
 }
 
+const getFoodImage = (name: string): string => {
+  const n = name.toLowerCase();
+  if (n.includes('ayam')) return 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=150&q=80';
+  if (n.includes('nasi') || n.includes('rice') || n.includes('lontong') || n.includes('kentang') || n.includes('singkong')) return 'https://images.unsplash.com/photo-1516684732162-798a0062be99?auto=format&fit=crop&w=150&q=80';
+  if (n.includes('telur') || n.includes('egg') || n.includes('omelet')) return 'https://images.unsplash.com/photo-1506976785307-8732e854ad03?auto=format&fit=crop&w=150&q=80';
+  if (n.includes('tempe')) return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=150&q=80';
+  if (n.includes('tahu') || n.includes('tofu')) return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=150&q=80';
+  if (n.includes('salmon') || n.includes('ikan') || n.includes('fish') || n.includes('udang')) return 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=150&q=80';
+  if (n.includes('sapi') || n.includes('beef') || n.includes('rendang') || n.includes('steak')) return 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=150&q=80';
+  if (n.includes('bayam') || n.includes('sayur') || n.includes('brokoli') || n.includes('salad')) return 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=150&q=80';
+  if (n.includes('pisang') || n.includes('banana') || n.includes('buah') || n.includes('apel')) return 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?auto=format&fit=crop&w=150&q=80';
+  if (n.includes('alpukat') || n.includes('avocado')) return 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&w=150&q=80';
+  if (n.includes('oat') || n.includes('gandum')) return 'https://images.unsplash.com/photo-1586444248902-2f64eddc13df?auto=format&fit=crop&w=150&q=80';
+  if (n.includes('whey') || n.includes('susu') || n.includes('protein')) return 'https://images.unsplash.com/photo-1579722821273-0f6c7d44362f?auto=format&fit=crop&w=150&q=80';
+  return 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=150&q=80';
+};
+
 export const NutritionPage: React.FC<NutritionPageProps> = ({
   profile,
   foodLogs,
@@ -198,11 +215,19 @@ export const NutritionPage: React.FC<NutritionPageProps> = ({
                 <div className="divide-y divide-slate-800/50 mt-1">
                   {sectionLogs.map(item => (
                     <div key={item.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
-                      <div>
-                        <p className="font-semibold text-slate-200">{item.food_name}</p>
-                        <p className="text-[11px] text-slate-400">
-                          {item.serving_unit} • {item.protein_g}g P • {item.carbs_g}g C • {item.fat_g}g F
-                        </p>
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={getFoodImage(item.food_name)}
+                          alt={item.food_name}
+                          className="w-10 h-10 rounded-xl object-cover bg-slate-800 border border-slate-700/60 flex-shrink-0"
+                          loading="lazy"
+                        />
+                        <div>
+                          <p className="font-semibold text-slate-200">{item.food_name}</p>
+                          <p className="text-[11px] text-slate-400">
+                            {item.serving_unit} • {item.protein_g}g P • {item.carbs_g}g C • {item.fat_g}g F
+                          </p>
+                        </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-mono font-bold text-white">
@@ -296,18 +321,26 @@ export const NutritionPage: React.FC<NutritionPageProps> = ({
                     onClick={() => handleSelectFood(food)}
                     className="w-full py-2.5 px-2 flex items-center justify-between text-left hover:bg-slate-800/40 rounded-xl transition-colors group"
                   >
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">
-                          {food.name}
-                        </span>
-                        {food.is_custom && (
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-400">Kustom</span>
-                        )}
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={food.image_url || getFoodImage(food.name)}
+                        alt={food.name}
+                        className="w-11 h-11 rounded-xl object-cover bg-slate-800 border border-slate-700/60 flex-shrink-0"
+                        loading="lazy"
+                      />
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">
+                            {food.name}
+                          </span>
+                          {food.is_custom && (
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-400">Kustom</span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-400">
+                          {food.serving_size} • P: {food.protein_g}g | C: {food.carbs_g}g | F: {food.fat_g}g
+                        </p>
                       </div>
-                      <p className="text-[11px] text-slate-400">
-                        {food.serving_size} • P: {food.protein_g}g | C: {food.carbs_g}g | F: {food.fat_g}g
-                      </p>
                     </div>
                     <div className="text-right">
                       <span className="text-xs font-mono font-bold text-emerald-400">

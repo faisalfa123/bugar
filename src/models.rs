@@ -226,3 +226,66 @@ pub struct ImportBackupRequest {
     pub payload: SyncPayload,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserAccount {
+    pub id: String,
+    pub username: String,
+    pub password_hash: String,
+    pub display_name: String,
+    pub created_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegisterRequest {
+    pub username: String,
+    pub password: String,
+    pub display_name: String,
+    pub age: Option<u32>,
+    pub gender: Option<String>,
+    pub height_cm: Option<f64>,
+    pub weight_kg: Option<f64>,
+    pub goal: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LoginRequest {
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthAccountResponse {
+    pub success: bool,
+    pub token: Option<String>,
+    pub user_id: Option<String>,
+    pub username: Option<String>,
+    pub display_name: Option<String>,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkoutCastEvent {
+    pub user_id: String,
+    pub session_id: String,
+    pub exercise_name: String,
+    pub current_set: u32,
+    pub current_reps: u32,
+    pub heart_rate_bpm: Option<u32>,
+    pub cadence_bpm: Option<u32>,
+    pub elapsed_seconds: u32,
+    pub is_active: bool,
+    pub timestamp: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HealthConnectPayload {
+    pub user_id: String,
+    pub source: String, // "apple_health" | "google_fit" | "smartband"
+    pub date: String,
+    pub steps: Option<u32>,
+    pub active_calories: Option<f64>,
+    pub heart_rate_avg: Option<u32>,
+    pub sleep_minutes: Option<u32>,
+    pub distance_km: Option<f64>,
+}
+

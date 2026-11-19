@@ -1,12 +1,15 @@
-import React from 'react';
-import { RefreshCw, Wifi, WifiOff, Settings as SettingsIcon, Play, Dumbbell, Utensils, Zap, HeartPulse, LayoutDashboard } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { RefreshCw, Wifi, WifiOff, Settings as SettingsIcon, Play, Dumbbell, Utensils, Zap, HeartPulse, LayoutDashboard, Globe, Smartphone, User } from 'lucide-react';
 import { SyncState } from '../services/syncService';
 import { NavTab } from './BottomNav';
+import { getLanguage, setLanguage, t, Language } from '../data/i18n';
+import { useAuth } from '../services/authContext';
 
 interface NavbarProps {
   syncState: SyncState;
   onSyncClick: () => void;
   onSettingsClick: () => void;
+  onMultiConnectClick: () => void;
   currentTab: string;
   onTabChange?: (tab: NavTab) => void;
 }
@@ -15,22 +18,31 @@ export const Navbar: React.FC<NavbarProps> = ({
   syncState,
   onSyncClick,
   onSettingsClick,
+  onMultiConnectClick,
   currentTab,
   onTabChange,
 }) => {
-  const todayStr = new Intl.DateTimeFormat('id-ID', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  }).format(new Date());
+  const { account, setShowAuthModal } = useAuth();
+  const [lang, setLang] = useState<Language>(getLanguage());
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('bugar_lang_change', handleLangChange);
+    return () => window.removeEventListener('bugar_lang_change', handleLangChange);
+  }, []);
+
+  const toggleLanguage = () => {
+    const nextLang: Language = lang === 'id' ? 'en' : 'id';
+    setLanguage(nextLang);
+  };
 
   const navLinks: { tab: NavTab; label: string; icon: React.ReactNode }[] = [
-    { tab: 'dashboard', label: 'Beranda', icon: <LayoutDashboard size={15} /> },
-    { tab: 'nutrition', label: 'Nutrisi', icon: <Utensils size={15} /> },
-    { tab: 'workout', label: 'Workout', icon: <Dumbbell size={15} /> },
-    { tab: 'fatburner', label: 'Fat Burn', icon: <Zap size={15} /> },
-    { tab: 'health', label: 'Kesehatan', icon: <HeartPulse size={15} /> },
-    { tab: 'guide', label: 'Panduan Form', icon: <Play size={15} /> },
+    { tab: 'dashboard', label: t('navDashboard'), icon: <LayoutDashboard size={15} /> },
+    { tab: 'nutrition', label: t('navNutrition'), icon: <Utensils size={15} /> },
+    { tab: 'workout', label: t('navWorkout'), icon: <Dumbbell size={15} /> },
+    { tab: 'fatburner', label: t('navFatBurner'), icon: <Zap size={15} /> },
+    { tab: 'health', label: t('navHealth'), icon: <HeartPulse size={15} /> },
+    { tab: 'guide', label: t('navGuide'), icon: <Play size={15} /> },
   ];
 
   return (
@@ -41,6 +53,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => onTabChange?.('dashboard')}
             className="flex items-center gap-3 text-left group"
+            style={{ cursor: 'pointer' }}
           >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-blue-500 p-0.5 shadow-md shadow-emerald-500/10">
               <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
@@ -58,12 +71,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ARM64
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 -mt-0.5 hidden sm:block">Edge Fitness & Nutrition</p>
+              <p className="text-[11px] text-slate-400 -mt-0.5 hidden sm:block">
+                {t('brandSubtitle')}
+              </p>
             </div>
           </button>
         </div>
 
-        {/* Desktop Navigation Links (Symmetrical Center Bar) */}
+        {/* Desktop Navigation Links */}
         {onTabChange && (
           <nav className="hidden lg:flex items-center gap-1 bg-slate-900/60 p-1 rounded-xl border border-slate-800/80">
             {navLinks.map(({ tab, label, icon }) => {
@@ -77,6 +92,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       ? 'bg-emerald-500 text-slate-950 shadow-sm'
                       : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
                   }`}
+                  style={{ cursor: 'pointer' }}
                 >
                   {icon}
                   {label}
@@ -87,49 +103,85 @@ export const Navbar: React.FC<NavbarProps> = ({
         )}
 
         {/* Right Controls */}
-        <div className="flex items-center gap-2.5">
-          {/* Date Indicator */}
-          <span className="hidden md:inline-flex text-xs font-medium text-slate-400 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800">
-            📅 {todayStr}
-          </span>
+        <div className="flex items-center gap-2">
+          {/* Multi-Connect Button */}
+          <button
+            onClick={onMultiConnectClick}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-xs font-semibold text-emerald-400 transition-colors"
+            style={{ cursor: 'pointer' }}
+            title={t('multiConnect')}
+          >
+            <Smartphone size={14} />
+            <span className="hidden xl:inline">{t('multiConnect')}</span>
+          </button>
+
+          {/* Language Toggle (ID / EN) */}
+          <button
+            onClick={toggleLanguage}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-xs font-bold text-slate-300 hover:text-white transition-colors"
+            style={{ cursor: 'pointer' }}
+            title={t('languageToggle')}
+          >
+            <Globe size={14} className="text-emerald-400" />
+            <span>{lang.toUpperCase()}</span>
+          </button>
 
           {/* Sync Status Badge */}
           <button
             onClick={onSyncClick}
             disabled={syncState.isSyncing}
-            title={syncState.isOnline ? 'Terhubung ke server ODROID-C2' : 'Bekerja dalam mode offline lokal'}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-              syncState.isSyncing
-                ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-                : syncState.isOnline
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
-                : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+            title={syncState.isOnline ? 'Terhubung ke server' : 'Mode offline'}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-medium transition-all ${
+              syncState.isOnline
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
             }`}
+            style={{ cursor: 'pointer' }}
           >
-            {syncState.isSyncing ? (
-              <RefreshCw size={13} className="animate-spin text-blue-400" />
-            ) : syncState.isOnline ? (
+            {syncState.isOnline ? (
               <Wifi size={13} className="text-emerald-400" />
             ) : (
               <WifiOff size={13} className="text-amber-400" />
             )}
-            <span className="hidden xs:inline">
-              {syncState.isSyncing
-                ? 'Sync...'
-                : syncState.isOnline
-                ? 'ODROID-C2'
-                : 'Offline'}
-            </span>
+            <RefreshCw
+              size={12}
+              className={`${syncState.isSyncing ? 'animate-spin' : ''}`}
+            />
           </button>
 
-          {/* Settings button */}
+          {/* User Account Button */}
+          {account ? (
+            <button
+              onClick={onSettingsClick}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-xs font-semibold text-slate-200 transition-colors"
+              style={{ cursor: 'pointer' }}
+              title={`Akun: ${account.displayName}`}
+            >
+              <div className="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center font-bold text-[10px]">
+                {account.displayName.charAt(0).toUpperCase()}
+              </div>
+              <span className="hidden sm:inline max-w-[80px] truncate">{account.displayName}</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all shadow-sm shadow-emerald-500/20"
+              style={{ cursor: 'pointer' }}
+            >
+              <User size={13} />
+              <span>{t('login')}</span>
+            </button>
+          )}
+
+          {/* Settings Icon */}
           <button
             onClick={onSettingsClick}
-            className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-all"
-            title="Pengaturan"
-            aria-label="Buka Pengaturan"
+            className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-400 hover:text-white transition-colors"
+            style={{ cursor: 'pointer' }}
+            aria-label={t('navSettings')}
+            title={t('navSettings')}
           >
-            <SettingsIcon size={18} />
+            <SettingsIcon size={16} />
           </button>
         </div>
       </div>

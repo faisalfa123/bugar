@@ -132,7 +132,37 @@ impl Database {
                 steps INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL
             );
-            CREATE INDEX IF NOT EXISTS idx_daily_habit_logs_date ON daily_habit_logs(date);"
+            CREATE INDEX IF NOT EXISTS idx_daily_habit_logs_date ON daily_habit_logs(date);
+
+            CREATE TABLE IF NOT EXISTS accounts (
+                id TEXT PRIMARY KEY,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                display_name TEXT NOT NULL,
+                created_at INTEGER NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_accounts_username ON accounts(username);
+
+            CREATE TABLE IF NOT EXISTS auth_sessions (
+                token TEXT PRIMARY KEY,
+                account_id TEXT NOT NULL,
+                expires_at INTEGER NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_sessions_token ON auth_sessions(token);
+
+            CREATE TABLE IF NOT EXISTS health_connect_logs (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                source TEXT NOT NULL,
+                date TEXT NOT NULL,
+                steps INTEGER,
+                active_calories REAL,
+                heart_rate_avg INTEGER,
+                sleep_minutes INTEGER,
+                distance_km REAL,
+                updated_at INTEGER NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_health_connect_user_date ON health_connect_logs(user_id, date);"
         )?;
         Ok(())
     }
@@ -458,6 +488,304 @@ impl Database {
         {
             let mut stmt = self.conn.prepare("SELECT id, user_id, date, water_ml, sleep_minutes, sleep_quality, steps, updated_at FROM daily_habit_logs ORDER BY date DESC")?;
             let rows = stmt.query_map([], |row| {
+                let qual: i64 = row.get(5)?;
+                Ok(DailyHabitLog {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    date: row.get(2)?,
+                    water_ml: row.get(3)?,
+                    sleep_minutes: row.get(4)?,
+                    sleep_quality: qual as u8,
+                    steps: row.get(6)?,
+                    updated_at: row.get(7)?,
+                })
+            })?;
+            for item in rows {
+                payload.daily_habit_logs.push(item?);
+            }
+        }
+
+        Ok(payload)
+    }
+
+    /// Count existing accounts in the database
+    pub fn count_accounts(&self) -> Result<usize> {
+        let count: i64 = self.conn.query_row("SELECT COUNT(*) FROM accounts", [], |r| r.get(0))?;
+        Ok(count as usize)
+    }
+
+    /// Create new user account
+    pub fn create_account(&self, username: &str, password_hash: &str, display_name: &str) -> Result<UserAccount> {
+        let id = format!("usr-{}", uuid::Uuid::new_v4());
+        let now = chrono::Utc::now().timestamp_millis();
+        self.conn.execute(
+            "INSERT INTO accounts (id, username, password_hash, display_name, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![id, username, password_hash, display_name, now],
+        )?;
+
+        Ok(UserAccount {
+            id,
+            username: username.to_string(),
+            password_hash: password_hash.to_string(),
+            display_name: display_name.to_string(),
+            created_at: now,
+        })
+    }
+
+    /// Find account by username (case-insensitive)
+    pub fn find_account_by_username(&self, username: &str) -> Result<Option<UserAccount>> {
+        let mut stmt = self.conn.prepare("SELECT id, username, password_hash, display_name, created_at FROM accounts WHERE LOWER(username) = LOWER(?1) LIMIT 1")?;
+        let mut rows = stmt.query(params![username])?;
+        if let Some(row) = rows.next()? {
+            Ok(Some(UserAccount {
+                id: row.get(0)?,
+                username: row.get(1)?,
+                password_hash: row.get(2)?,
+                display_name: row.get(3)?,
+                created_at: row.get(4)?,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Find account by ID
+    pub fn find_account_by_id(&self, id: &str) -> Result<Option<UserAccount>> {
+        let mut stmt = self.conn.prepare("SELECT id, username, password_hash, display_name, created_at FROM accounts WHERE id = ?1 LIMIT 1")?;
+        let mut rows = stmt.query(params![id])?;
+        if let Some(row) = rows.next()? {
+            Ok(Some(UserAccount {
+                id: row.get(0)?,
+                username: row.get(1)?,
+                password_hash: row.get(2)?,
+                display_name: row.get(3)?,
+                created_at: row.get(4)?,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Create persistent auth session token (valid for 365 days for seamless auto-login)
+    pub fn create_session(&self, account_id: &str) -> Result<String> {
+        let token = format!("tok-{}", uuid::Uuid::new_v4());
+        let expires_at = chrono::Utc::now().timestamp_millis() + (365 * 24 * 3600 * 1000);
+        self.conn.execute(
+            "INSERT INTO auth_sessions (token, account_id, expires_at) VALUES (?1, ?2, ?3)",
+            params![token, account_id, expires_at],
+        )?;
+        Ok(token)
+    }
+
+    /// Verify session token and retrieve account
+    pub fn verify_session(&self, token: &str) -> Result<Option<UserAccount>> {
+        let now = chrono::Utc::now().timestamp_millis();
+        let mut stmt = self.conn.prepare(
+            "SELECT a.id, a.username, a.password_hash, a.display_name, a.created_at
+             FROM auth_sessions s
+             JOIN accounts a ON a.id = s.account_id
+             WHERE s.token = ?1 AND s.expires_at > ?2 LIMIT 1"
+        )?;
+        let mut rows = stmt.query(params![token, now])?;
+        if let Some(row) = rows.next()? {
+            Ok(Some(UserAccount {
+                id: row.get(0)?,
+                username: row.get(1)?,
+                password_hash: row.get(2)?,
+                display_name: row.get(3)?,
+                created_at: row.get(4)?,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Delete session on logout
+    pub fn delete_session(&self, token: &str) -> Result<()> {
+        self.conn.execute("DELETE FROM auth_sessions WHERE token = ?1", params![token])?;
+        Ok(())
+    }
+
+    /// Save Health Connect / Apple Health / Smartband data log
+    pub fn save_health_connect_log(&self, p: &HealthConnectPayload) -> Result<()> {
+        let id = format!("hc-{}-{}", p.source, p.date);
+        let now = chrono::Utc::now().timestamp_millis();
+        self.conn.execute(
+            "INSERT INTO health_connect_logs (id, user_id, source, date, steps, active_calories, heart_rate_avg, sleep_minutes, distance_km, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+             ON CONFLICT(id) DO UPDATE SET
+                steps = COALESCE(excluded.steps, health_connect_logs.steps),
+                active_calories = COALESCE(excluded.active_calories, health_connect_logs.active_calories),
+                heart_rate_avg = COALESCE(excluded.heart_rate_avg, health_connect_logs.heart_rate_avg),
+                sleep_minutes = COALESCE(excluded.sleep_minutes, health_connect_logs.sleep_minutes),
+                distance_km = COALESCE(excluded.distance_km, health_connect_logs.distance_km),
+                updated_at = excluded.updated_at;",
+            params![id, p.user_id, p.source, p.date, p.steps, p.active_calories, p.heart_rate_avg, p.sleep_minutes, p.distance_km, now],
+        )?;
+
+        // Also update or insert daily habit log steps if steps provided
+        if let Some(steps) = p.steps {
+            let habit_id = format!("habit-{}-{}", p.user_id, p.date);
+            self.conn.execute(
+                "INSERT INTO daily_habit_logs (id, user_id, date, water_ml, sleep_minutes, sleep_quality, steps, updated_at)
+                 VALUES (?1, ?2, ?3, 0, 0, 3, ?4, ?5)
+                 ON CONFLICT(id) DO UPDATE SET steps = MAX(excluded.steps, daily_habit_logs.steps), updated_at = excluded.updated_at;",
+                params![habit_id, p.user_id, p.date, steps, now],
+            )?;
+        }
+        Ok(())
+    }
+
+    /// User-scoped snapshot retrieval for multi-user support
+    pub fn get_user_snapshot(&self, user_id: &str) -> Result<SyncPayload> {
+        let mut payload = SyncPayload {
+            client_timestamp: chrono::Utc::now().timestamp_millis(),
+            ..Default::default()
+        };
+
+        // User Profile
+        {
+            let mut stmt = self.conn.prepare("SELECT id, name, age, gender, height_cm, weight_kg, activity_level, goal, target_calories, target_protein_g, target_carbs_g, target_fat_g, target_water_ml, updated_at FROM user_profiles WHERE id = ?1 LIMIT 1")?;
+            let mut rows = stmt.query(params![user_id])?;
+            if let Some(row) = rows.next()? {
+                payload.profile = Some(UserProfile {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    age: row.get(2)?,
+                    gender: row.get(3)?,
+                    height_cm: row.get(4)?,
+                    weight_kg: row.get(5)?,
+                    activity_level: row.get(6)?,
+                    goal: row.get(7)?,
+                    target_calories: row.get(8)?,
+                    target_protein_g: row.get(9)?,
+                    target_carbs_g: row.get(10)?,
+                    target_fat_g: row.get(11)?,
+                    target_water_ml: row.get(12)?,
+                    updated_at: row.get(13)?,
+                });
+            }
+        }
+
+        // Food logs scoped to user
+        {
+            let mut stmt = self.conn.prepare("SELECT id, user_id, date, meal_type, food_name, serving_count, serving_unit, calories, protein_g, carbs_g, fat_g, updated_at FROM food_logs WHERE user_id = ?1 ORDER BY date DESC, updated_at DESC")?;
+            let rows = stmt.query_map(params![user_id], |row| {
+                Ok(FoodLog {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    date: row.get(2)?,
+                    meal_type: row.get(3)?,
+                    food_name: row.get(4)?,
+                    serving_count: row.get(5)?,
+                    serving_unit: row.get(6)?,
+                    calories: row.get(7)?,
+                    protein_g: row.get(8)?,
+                    carbs_g: row.get(9)?,
+                    fat_g: row.get(10)?,
+                    updated_at: row.get(11)?,
+                })
+            })?;
+            for item in rows {
+                payload.food_logs.push(item?);
+            }
+        }
+
+        // Workout logs scoped to user
+        {
+            let mut stmt = self.conn.prepare("SELECT id, user_id, date, routine_name, exercises_json, duration_minutes, total_volume_kg, notes, is_pr, updated_at FROM workout_logs WHERE user_id = ?1 ORDER BY date DESC")?;
+            let rows = stmt.query_map(params![user_id], |row| {
+                let json_str: String = row.get(4)?;
+                let exercises: Vec<ExerciseItem> = serde_json::from_str(&json_str).unwrap_or_default();
+                let is_pr_val: i64 = row.get(8)?;
+                Ok(WorkoutLog {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    date: row.get(2)?,
+                    routine_name: row.get(3)?,
+                    exercises,
+                    duration_minutes: row.get(5)?,
+                    total_volume_kg: row.get(6)?,
+                    notes: row.get(7)?,
+                    is_pr: is_pr_val != 0,
+                    updated_at: row.get(9)?,
+                })
+            })?;
+            for item in rows {
+                payload.workout_logs.push(item?);
+            }
+        }
+
+        // Cardio logs scoped to user
+        {
+            let mut stmt = self.conn.prepare("SELECT id, user_id, date, activity_type, distance_km, duration_minutes, pace_min_km, avg_speed_kmh, calories_burned, updated_at FROM cardio_logs WHERE user_id = ?1 ORDER BY date DESC")?;
+            let rows = stmt.query_map(params![user_id], |row| {
+                Ok(CardioLog {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    date: row.get(2)?,
+                    activity_type: row.get(3)?,
+                    distance_km: row.get(4)?,
+                    duration_minutes: row.get(5)?,
+                    pace_min_km: row.get(6)?,
+                    avg_speed_kmh: row.get(7)?,
+                    calories_burned: row.get(8)?,
+                    updated_at: row.get(9)?,
+                })
+            })?;
+            for item in rows {
+                payload.cardio_logs.push(item?);
+            }
+        }
+
+        // Fat burner logs scoped to user
+        {
+            let mut stmt = self.conn.prepare("SELECT id, user_id, date, program_id, program_name, duration_seconds, calories_burned, completed, updated_at FROM fat_burner_logs WHERE user_id = ?1 ORDER BY date DESC")?;
+            let rows = stmt.query_map(params![user_id], |row| {
+                let comp_val: i64 = row.get(7)?;
+                Ok(FatBurnerLog {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    date: row.get(2)?,
+                    program_id: row.get(3)?,
+                    program_name: row.get(4)?,
+                    duration_seconds: row.get(5)?,
+                    calories_burned: row.get(6)?,
+                    completed: comp_val != 0,
+                    updated_at: row.get(8)?,
+                })
+            })?;
+            for item in rows {
+                payload.fat_burner_logs.push(item?);
+            }
+        }
+
+        // Body metric logs scoped to user
+        {
+            let mut stmt = self.conn.prepare("SELECT id, user_id, date, weight_kg, neck_cm, waist_cm, hip_cm, bmi, body_fat_pct, updated_at FROM body_metric_logs WHERE user_id = ?1 ORDER BY date DESC")?;
+            let rows = stmt.query_map(params![user_id], |row| {
+                Ok(BodyMetricLog {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    date: row.get(2)?,
+                    weight_kg: row.get(3)?,
+                    neck_cm: row.get(4)?,
+                    waist_cm: row.get(5)?,
+                    hip_cm: row.get(6)?,
+                    bmi: row.get(7)?,
+                    body_fat_pct: row.get(8)?,
+                    updated_at: row.get(9)?,
+                })
+            })?;
+            for item in rows {
+                payload.body_metric_logs.push(item?);
+            }
+        }
+
+        // Daily habit logs scoped to user
+        {
+            let mut stmt = self.conn.prepare("SELECT id, user_id, date, water_ml, sleep_minutes, sleep_quality, steps, updated_at FROM daily_habit_logs WHERE user_id = ?1 ORDER BY date DESC")?;
+            let rows = stmt.query_map(params![user_id], |row| {
                 let qual: i64 = row.get(5)?;
                 Ok(DailyHabitLog {
                     id: row.get(0)?,

@@ -29,6 +29,7 @@ export interface FoodItem {
   carbs_g: number;
   fat_g: number;
   is_custom?: boolean;
+  image_url?: string;
 }
 
 export interface FoodLog {

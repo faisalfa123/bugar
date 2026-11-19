@@ -3,6 +3,9 @@ import { UserProfile, ServerHealth, HddStatus, SyncPayload } from '../types';
 import { calculateProfileTargets } from '../engine/mastermindEngine';
 import { syncService, SyncState } from '../services/syncService';
 import { localDB } from '../services/db';
+import { useAuth } from '../services/authContext';
+import { getStoredTheme, saveTheme, BG_STYLES, ACCENT_COLORS, BgStyle, AccentColor } from '../data/theme';
+import { getLanguage, setLanguage, t, Language } from '../data/i18n';
 import {
   Settings,
   Server,
@@ -16,7 +19,10 @@ import {
   FolderSync,
   FileText,
   AlertTriangle,
-  X
+  X,
+  Palette,
+  Globe,
+  LogOut
 } from 'lucide-react';
 
 interface SettingsPageProps {
@@ -34,6 +40,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   onManualSync,
   onDataRestored,
 }) => {
+  const { account, logout, setShowAuthModal } = useAuth();
+  const [theme, setTheme] = useState(getStoredTheme());
+  const [lang, setLang] = useState<Language>(getLanguage());
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
   // Profile Form state
   const [name, setName] = useState(profile.name);
   const [age, setAge] = useState(profile.age.toString());
@@ -190,15 +201,205 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
   return (
     <div className="space-y-6 pb-28">
-      {/* Header */}
-      <div className="p-5 rounded-3xl glass-panel relative overflow-hidden">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center">
-            <Settings size={18} />
+      {/* 0. Akun Pengguna & Masuk Otomatis (Auto-Login) */}
+      <div className="p-5 rounded-3xl glass-panel border border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-lg">
+              {account ? account.displayName.charAt(0).toUpperCase() : <User size={22} />}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-white tracking-tight">
+                  {account ? account.displayName : 'Belum Masuk Akun'}
+                </h2>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  account ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-slate-400'
+                }`}>
+                  {account ? '● Auto-Login Aktif' : 'Tamu Lokal'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {account ? `@${account.username} • Data tubuh dan histori tersinkronisasi` : t('noAccountPrompt')}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {account ? (
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(true)}
+                className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 font-bold text-xs flex items-center gap-1.5 transition-all"
+                style={{ cursor: 'pointer' }}
+              >
+                <LogOut size={14} />
+                <span>{t('logout')}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowAuthModal(true)}
+                className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20"
+                style={{ cursor: 'pointer' }}
+              >
+                <User size={14} />
+                <span>{t('login')} / {t('register')}</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Modal Konfirmasi Logout */}
+        {showLogoutConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <div className="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-2xl p-5 shadow-2xl">
+              <h3 className="text-base font-bold text-white mb-2">{t('logout')}</h3>
+              <p className="text-xs text-slate-300 mb-5 leading-relaxed">
+                {t('logoutConfirm')}
+              </p>
+              <div className="flex gap-2.5 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs"
+                  style={{ cursor: 'pointer' }}
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await logout();
+                    setShowLogoutConfirm(false);
+                    window.location.reload();
+                  }}
+                  className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs shadow-md shadow-rose-500/20"
+                  style={{ cursor: 'pointer' }}
+                >
+                  Ya, Keluar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 0.1 Personalisasi & Gaya Tampilan (Background Style & Accent Color) */}
+      <div className="p-5 rounded-3xl glass-panel border border-slate-800">
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">
+            <Palette size={18} />
           </div>
           <div>
-            <h1 className="text-xl font-black text-white tracking-tight">Pengaturan & Penyimpanan Edge</h1>
-            <p className="text-xs text-slate-400">Status ODROID-C2, backup /mnt/hdd1/bugar/, dan pemulihan data</p>
+            <h2 className="text-base font-bold text-white tracking-tight">{t('themeSettings')}</h2>
+            <p className="text-xs text-slate-400">Atur nuansa latar belakang, warna aksen, dan bahasa antarmuka</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {/* Background Presets */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-2">
+              {t('backgroundStyle')}
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+              {(Object.keys(BG_STYLES) as BgStyle[]).map((key) => {
+                const item = BG_STYLES[key];
+                const isActive = theme.bgStyle === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      const updated = { ...theme, bgStyle: key };
+                      setTheme(updated);
+                      saveTheme(updated);
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      isActive
+                        ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500'
+                        : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
+                    }`}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div className="w-full h-8 rounded-lg mb-1.5 border border-slate-700/50" style={{ background: item.cssBackground }} />
+                    <p className={`text-[11px] font-bold truncate ${isActive ? 'text-emerald-400' : 'text-slate-300'}`}>
+                      {item.name}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Accent Color Selection */}
+          <div className="pt-2 border-t border-slate-800/80">
+            <label className="block text-xs font-semibold text-slate-300 mb-2">
+              {t('accentColor')}
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              {(Object.keys(ACCENT_COLORS) as AccentColor[]).map((key) => {
+                const item = ACCENT_COLORS[key];
+                const isActive = theme.accent === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      const updated = { ...theme, accent: key };
+                      setTheme(updated);
+                      saveTheme(updated);
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
+                      isActive
+                        ? 'border-white bg-slate-800 text-white shadow-sm'
+                        : 'border-slate-800 bg-slate-900/80 text-slate-400 hover:text-slate-200'
+                    }`}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: item.hex }} />
+                    <span>{item.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Language Selector */}
+          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-slate-300">Bahasa / Language</p>
+              <p className="text-[11px] text-slate-400">Pilih bahasa tampilan teks dan panduan</p>
+            </div>
+            <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setLang('id');
+                  setLanguage('id');
+                }}
+                className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                  lang === 'id' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                }`}
+                style={{ cursor: 'pointer' }}
+              >
+                🇮🇩 Indonesia
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLang('en');
+                  setLanguage('en');
+                }}
+                className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                  lang === 'en' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                }`}
+                style={{ cursor: 'pointer' }}
+              >
+                🇬🇧 English
+              </button>
+            </div>
           </div>
         </div>
       </div>

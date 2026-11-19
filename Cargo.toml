@@ -1,13 +1,13 @@
 [package]
 name = "bugar"
-version = "0.1.1"
+version = "0.1.4"
 edition = "2021"
 authors = ["Faisal <faisal@bugar.local>"]
 description = "All-in-One Fitness, Nutrition & Fat Burner Edge Server for ODROID-C2 (ARM64)"
 license = "MIT"
 
 [dependencies]
-axum = { version = "0.7", default-features = false, features = ["tokio", "http1", "json"] }
+axum = { version = "0.7", default-features = false, features = ["tokio", "http1", "json", "query"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal", "time"] }
 rusqlite = { version = "0.31", features = ["bundled"] }
 rust-embed = { version = "8.4", features = ["mime-guess"] }
