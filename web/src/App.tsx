@@ -23,6 +23,7 @@ import { WorkoutPage } from './pages/WorkoutPage';
 import { FatBurnerPage } from './pages/FatBurnerPage';
 import { HealthPage } from './pages/HealthPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ExerciseGuidePage } from './pages/ExerciseGuidePage';
 
 const DEFAULT_PROFILE: UserProfile = {
   id: 'user-01',
@@ -229,7 +230,8 @@ export const App: React.FC = () => {
         syncState={syncState}
         onSyncClick={() => syncService.syncNow()}
         onSettingsClick={() => setCurrentTab('settings')}
-        currentPage={currentTab}
+        currentTab={currentTab}
+        onTabChange={(tab) => setCurrentTab(tab)}
       />
 
       {/* Main Content Area */}
@@ -286,6 +288,10 @@ export const App: React.FC = () => {
             onSaveBodyMetric={handleSaveBodyMetric}
             onUpdateHabit={handleUpdateHabit}
           />
+        )}
+
+        {currentTab === 'guide' && (
+          <ExerciseGuidePage />
         )}
 
         {currentTab === 'settings' && (

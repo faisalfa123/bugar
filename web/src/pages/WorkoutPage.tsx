@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { WorkoutLog, CardioLog, UserProfile } from '../types';
 import { audioSynth } from '../services/audioSynth';
+import { EXERCISE_GUIDES, ExerciseGuide } from '../data/exerciseGuides';
+import { ExerciseFormPlayer } from '../components/ExerciseFormPlayer';
 import {
   Dumbbell,
   Play,
@@ -78,6 +80,23 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({
   // Rest Timer State
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
   const [initialRestDuration, setInitialRestDuration] = useState<number>(90);
+
+  // Form Guide Modal State
+  const [selectedFormGuide, setSelectedFormGuide] = useState<ExerciseGuide | null>(null);
+
+  const openFormGuideForExercise = (exerciseName: string) => {
+    const nameLower = exerciseName.toLowerCase();
+    let guide = EXERCISE_GUIDES.find(g => nameLower.includes(g.id) || nameLower.includes(g.name.toLowerCase()));
+    if (!guide) {
+      if (nameLower.includes('press') || nameLower.includes('push') || nameLower.includes('dada')) guide = EXERCISE_GUIDES[0];
+      else if (nameLower.includes('squat') || nameLower.includes('leg') || nameLower.includes('paha')) guide = EXERCISE_GUIDES[1];
+      else if (nameLower.includes('pull') || nameLower.includes('row') || nameLower.includes('lat')) guide = EXERCISE_GUIDES[3];
+      else if (nameLower.includes('curl') || nameLower.includes('biceps')) guide = EXERCISE_GUIDES[5];
+      else if (nameLower.includes('lunge')) guide = EXERCISE_GUIDES[4];
+      else guide = EXERCISE_GUIDES[0];
+    }
+    setSelectedFormGuide(guide);
+  };
 
   // Cardio Form State
   const [cardioType, setCardioType] = useState<'running' | 'walking' | 'cycling' | 'swimming'>('running');
@@ -383,11 +402,21 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({
               {/* Exercises Sets Logger */}
               <div className="space-y-5 mt-4">
                 {activeExercises.map((exercise, exIdx) => (
-                  <div key={exIdx} className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
-                    <h3 className="text-sm font-bold text-white mb-2.5 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-blue-500" />
-                      {exercise.name}
-                    </h3>
+                  <div key={exIdx} className="p-4 rounded-2xl bg-slate-900 border border-slate-800">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500" />
+                        {exercise.name}
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => openFormGuideForExercise(exercise.name)}
+                        className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 transition-colors"
+                      >
+                        <Play size={11} />
+                        Panduan Form
+                      </button>
+                    </div>
 
                     {/* Sets Table Header */}
                     <div className="grid grid-cols-12 gap-2 text-[11px] font-semibold text-slate-400 pb-1 border-b border-slate-800 text-center">
@@ -644,6 +673,18 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({
               ))}
             </>
           )}
+        </div>
+      )}
+
+      {/* Exercise Form Tutorial Modal */}
+      {selectedFormGuide && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-3 flex items-center justify-center overflow-y-auto">
+          <div className="w-full max-w-lg my-auto">
+            <ExerciseFormPlayer
+              guide={selectedFormGuide}
+              onClose={() => setSelectedFormGuide(null)}
+            />
+          </div>
         </div>
       )}
     </div>
