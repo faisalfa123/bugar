@@ -44,7 +44,8 @@ export const translations = {
 
     // Form Guide / Tutorial
     exerciseTutorial: 'Tutorial Gerakan Latihan',
-    modeRealVideo: 'Video Asli / 3D Anatomi',
+    mode3dMannequin: '3D Mannequin 360°',
+    modeRealVideo: 'Video Manusia Asli',
     modeRealistic2d: 'Animasi 2D Anatomi Detail',
     jointAngles: 'Sudut Sendi Real-Time',
     phaseTempo: 'Fase Tempo',
@@ -163,7 +164,8 @@ export const translations = {
 
     // Form Guide / Tutorial
     exerciseTutorial: 'Exercise Form Tutorial',
-    modeRealVideo: 'Real Video / 3D Anatomy',
+    mode3dMannequin: '3D Mannequin 360°',
+    modeRealVideo: 'Real Human Video',
     modeRealistic2d: 'Detailed 2D Anatomy Motion',
     jointAngles: 'Live Joint Angles',
     phaseTempo: 'Cadence Phase',

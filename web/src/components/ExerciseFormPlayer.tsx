@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Play, Pause, RotateCcw, Volume2, VolumeX, CheckCircle2, AlertTriangle, Lightbulb } from 'lucide-react';
 import { ExerciseGuide } from '../data/exerciseGuides';
 import { MuscleHeatmap } from './MuscleHeatmap';
+import { ThreeDExerciseViewer } from './ThreeDExerciseViewer';
 import { t } from '../data/i18n';
 
 interface ExerciseFormPlayerProps {
@@ -13,8 +14,8 @@ export const ExerciseFormPlayer: React.FC<ExerciseFormPlayerProps> = ({ guide, o
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  // Display mode: 'video' (Real Human Video / 3D) or 'realistic2d' (Detailed 2D Anatomy Motion)
-  const [displayMode, setDisplayMode] = useState<'video' | 'realistic2d'>('video');
+  // Display mode: '3d' (Interactive 360 Mannequin), 'video' (Real Human Video), or 'realistic2d' (Detailed 2D Anatomy Motion)
+  const [displayMode, setDisplayMode] = useState<'3d' | 'video' | 'realistic2d'>('3d');
   const [isPlaying, setIsPlaying] = useState(true);
   const [speed, setSpeed] = useState<0.5 | 1 | 1.5>(1);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -550,9 +551,21 @@ export const ExerciseFormPlayer: React.FC<ExerciseFormPlayerProps> = ({ guide, o
         )}
       </div>
 
-      {/* Mode Switcher: Video Manusia Asli vs Animasi 2D Anatomi Detail */}
+      {/* Mode Switcher: 3D Mannequin 360° vs Video Manusia Asli vs Animasi 2D */}
       <div className="p-3 bg-slate-950/60 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 p-1 bg-slate-900 rounded-xl border border-slate-800">
+          <button
+            type="button"
+            onClick={() => setDisplayMode('3d')}
+            className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              displayMode === '3d'
+                ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+            style={{ cursor: 'pointer' }}
+          >
+            🧊 {t('mode3dMannequin')}
+          </button>
           <button
             type="button"
             onClick={() => setDisplayMode('video')}
@@ -614,7 +627,11 @@ export const ExerciseFormPlayer: React.FC<ExerciseFormPlayerProps> = ({ guide, o
 
       {/* Main Display Area */}
       <div className="relative aspect-video w-full bg-slate-950 flex items-center justify-center overflow-hidden border-b border-slate-800">
-        {displayMode === 'video' ? (
+        {displayMode === '3d' ? (
+          <div className="relative w-full h-full">
+            <ThreeDExerciseViewer guide={guide} />
+          </div>
+        ) : displayMode === 'video' ? (
           <div className="relative w-full h-full flex items-center justify-center bg-black">
             <video
               ref={videoRef}

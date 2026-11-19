@@ -2,7 +2,7 @@ export interface ExerciseGuide {
   id: string;
   name: string;
   nameEn: string;
-  category: 'Dada' | 'Kaki' | 'Punggung' | 'Core' | 'Bahu' | 'Lengan';
+  category: 'Dada' | 'Kaki' | 'Punggung' | 'Core' | 'Bahu' | 'Lengan' | 'Kardio & Lari' | 'Senam & Fleksibilitas' | 'Sepeda & Renang';
   difficulty: 'Pemula' | 'Menengah' | 'Lanjutan';
   primaryMuscles: string[];
   secondaryMuscles: string[];
@@ -13,7 +13,7 @@ export interface ExerciseGuide {
   executionSteps: string[];
   commonMistakes: string[];
   proTips: string[];
-  animationType: 'pushup' | 'squat' | 'plank' | 'pullup' | 'lunge' | 'bicep_curl';
+  animationType: 'pushup' | 'squat' | 'plank' | 'pullup' | 'lunge' | 'bicep_curl' | 'running' | 'aerobics' | 'cycling' | 'swimming';
   videoUrl: string;
   posterUrl: string;
 }
@@ -28,7 +28,7 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     primaryMuscles: ['chest', 'triceps'],
     secondaryMuscles: ['front_delts', 'abs', 'serratus'],
     tempo: '2-1-1',
-    description: 'Gerakan pendorong horizontal fundamental untuk melatih dada, trisep, dan bahu depan dengan stabilitas inti tubuh.',
+    description: 'Gerakan pendorong horizontal fundamental untuk melatih dada, trisep, dan bahu depan dengan stabilitas inti tubuh lurus.',
     descriptionEn: 'Fundamental horizontal pressing movement building chest, triceps, and anterior deltoids with core stability.',
     setupSteps: [
       'Posisikan telapak tangan sedikit lebih lebar dari bahu di lantai sejajar dada.',
@@ -38,7 +38,7 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     ],
     executionSteps: [
       'Tarik napas dan turunkan tubuh secara terkontrol selama 2 detik.',
-      'Arahkan siku ke belakang membentuk sudut 45 derajat (bukan melebar 90 derajat menyerupai T).',
+      'Arahkan siku ke belakang membentuk sudut 45 derajat (bukan melebar 90 derajat).',
       'Turun hingga dada berjarak 3-5 cm dari lantai, tahan 1 detik di posisi terbawah.',
       'Hembuskan napas kuat dan dorong lantai menjauh hingga lengan lurus kembali.'
     ],
@@ -52,8 +52,8 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
       'Gunakan incline push-up (tangan di bangku) jika belum kuat melakukan full push-up.'
     ],
     animationType: 'pushup',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-push-ups-in-a-gym-42686-large.mp4',
-    posterUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=600&q=80',
+    videoUrl: '/media/pushup.mp4',
+    posterUrl: '/media/pushup-poster.jpg',
   },
   {
     id: 'pull-up',
@@ -87,8 +87,8 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
       'Gunakan resistance band jika belum sanggup mengangkat beban tubuh sendiri.'
     ],
     animationType: 'pullup',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-pull-ups-in-a-crossfit-gym-42691-large.mp4',
-    posterUrl: 'https://images.unsplash.com/photo-1598971639058-fab3c3109a00?auto=format&fit=crop&w=600&q=80',
+    videoUrl: '/media/pullup.mp4',
+    posterUrl: '/media/pullup-poster.jpg',
   },
   {
     id: 'bodyweight-squat',
@@ -122,8 +122,8 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
       'Buang napas kuat saat mendorong tubuh kembali ke atas.'
     ],
     animationType: 'squat',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-young-man-exercising-doing-squats-42681-large.mp4',
-    posterUrl: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?auto=format&fit=crop&w=600&q=80',
+    videoUrl: '/media/squat.mp4',
+    posterUrl: '/media/squat-poster.jpg',
   },
   {
     id: 'plank',
@@ -150,15 +150,15 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     commonMistakes: [
       'Pinggang melorot ke bawah yang memberi tekanan berlebih pada sendi lumbal.',
       'Bokong terangkat terlalu tinggi menyerupai segitiga.',
-      'Menahan napas.'
+      'Menahan napas saat menahan posisi.'
     ],
     proTips: [
       'Tarik siku ke arah jari kaki secara isometrik tanpa benar-benar bergerak untuk melipatgandakan aktivasi perut.',
       'Kualitas form 30 detik jauh lebih efektif daripada 2 menit dengan form yang melorot.'
     ],
     animationType: 'plank',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-plank-exercise-in-gym-42689-large.mp4',
-    posterUrl: 'https://images.unsplash.com/photo-1566241142559-40e1dab266c6?auto=format&fit=crop&w=600&q=80',
+    videoUrl: '/media/plank.mp4',
+    posterUrl: '/media/plank-poster.jpg',
   },
   {
     id: 'walking-lunge',
@@ -189,8 +189,8 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
       'Pertahankan torso tetap tegak lurus lantai untuk pembagian beban glutes dan quads yang merata.'
     ],
     animationType: 'lunge',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-young-man-doing-lunges-in-gym-42683-large.mp4',
-    posterUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=600&q=80',
+    videoUrl: '/media/lunge.mp4',
+    posterUrl: '/media/lunge-poster.jpg',
   },
   {
     id: 'dumbbell-curl',
@@ -220,7 +220,147 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
       'Kunci siku di samping torso agar tegangan tidak berpindah ke bahu depan.'
     ],
     animationType: 'bicep_curl',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-biceps-with-dumbbells-42684-large.mp4',
-    posterUrl: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=600&q=80',
+    videoUrl: '/media/bicep_curl.mp4',
+    posterUrl: '/media/bicep_curl-poster.jpg',
+  },
+  {
+    id: 'running-form',
+    name: 'Teknik Lari Biomekanik',
+    nameEn: 'Running Biomechanics & Form',
+    category: 'Kardio & Lari',
+    difficulty: 'Menengah',
+    primaryMuscles: ['quads', 'calves', 'glutes'],
+    secondaryMuscles: ['hamstrings', 'abs', 'hip_flexors'],
+    tempo: '180 SPM Cadence',
+    description: 'Panduan teknik lari efisien energi dengan tumpuan midfoot, postur tegak condong dari engsel pergelangan kaki, dan irama langkah stabil.',
+    descriptionEn: 'High-efficiency running form focusing on midfoot landing, ankle lean, and 180 SPM cadence.',
+    setupSteps: [
+      'Berdiri tegak santai, tarik bahu ke belakang dan turunkan (hindari bahu tegang mendekati telinga).',
+      'Condongkan seluruh tubuh lurus ke depan dari pergelangan kaki (bukan membungkuk di pinggang).',
+      'Tekuk siku membentuk sudut 90 derajat dan biarkan telapak tangan rileks seperti menggenggam telur.'
+    ],
+    executionSteps: [
+      'Langkahkan kaki dengan tumpuan tepat di bawah pusat gravitasi tubuh (midfoot strike).',
+      'Pertahankan irama langkah (cadence) di kisaran 170-180 langkah per menit (SPM).',
+      'Ayunkank lengan ke depan dan ke belakang sejajar lintasan lari (bukan menyilang dada).',
+      'Angkat lutut ke depan dan dorong ke belakang dengan tarikan tumit singkat ke arah pantat.'
+    ],
+    commonMistakes: [
+      'Overstriding: melangkah terlalu jauh ke depan sehingga tumit mendarat kaku seperti mengerem laju.',
+      'Membungkuk di pinggang yang membatasi kapasitas ekspansi paru-paru.',
+      'Menggenggam tangan terlalu kencang sehingga otot leher dan bahu cepat kram.'
+    ],
+    proTips: [
+      'Fokus pada frekuensi langkah cepat dan ringan daripada melompat jauh di udara.',
+      'Tarik napas berirama 3 langkah tarik dan 2 langkah buang untuk mencegah stitches (sakit perut samping).'
+    ],
+    animationType: 'running',
+    videoUrl: '/media/running.mp4',
+    posterUrl: '/media/running-poster.jpg',
+  },
+  {
+    id: 'aerobic-gymnastics',
+    name: 'Senam Aerobik & Mobilitas',
+    nameEn: 'Aerobic Gymnastics & Mobility',
+    category: 'Senam & Fleksibilitas',
+    difficulty: 'Pemula',
+    primaryMuscles: ['abs', 'glutes', 'quads'],
+    secondaryMuscles: ['shoulders', 'calves', 'upper_back'],
+    tempo: 'Rhythm Flow',
+    description: 'Rangkaian senam fungsional dan peregangan dinamis untuk melancarkan sirkulasi darah, sendi panggul, dan fleksibilitas torso.',
+    descriptionEn: 'Functional aerobic gymnastics and dynamic mobility for blood circulation and joint range of motion.',
+    setupSteps: [
+      'Berdiri di area lapang dengan ruang gerak 2x2 meter.',
+      'Buka kaki selebar pinggul dan lemaskan seluruh persendian.',
+      'Atur pernapasan dalam melalui hidung dan buang perlahan lewat mulut.'
+    ],
+    executionSteps: [
+      'Awali dengan step touch ke kanan dan kiri sambil mengayunkan kedua lengan harmonis.',
+      'Lakukan rotasi torso dinamis untuk membuka mobilitas tulang belakang bagian toraks.',
+      'Lakukan arm circles lebar untuk melumasi kapsul sendi bahu.',
+      'Kombinasikan dengan squat peregangan ringan dan breathing cycle teratur.'
+    ],
+    commonMistakes: [
+      'Mengunci sendi lutut kaku saat melangkah.',
+      'Menahan napas saat perpindahan gerakan.',
+      'Melakukan gerakan menyentak tanpa pemanasan awal.'
+    ],
+    proTips: [
+      'Gunakan irama musik berketukan 120-130 BPM untuk menjaga tempo senam tetap konstan.',
+      'Cocok dilakukan saat transisi istirahat aktif latihan beban untuk mempercepat pemulihan laktat.'
+    ],
+    animationType: 'aerobics',
+    videoUrl: '/media/aerobics.mp4',
+    posterUrl: '/media/aerobics-poster.jpg',
+  },
+  {
+    id: 'cycling-efficiency',
+    name: 'Bersepeda Ergonomis',
+    nameEn: 'Ergonomic Cycling & Cadence',
+    category: 'Sepeda & Renang',
+    difficulty: 'Pemula',
+    primaryMuscles: ['quads', 'glutes', 'hamstrings'],
+    secondaryMuscles: ['calves', 'abs', 'lower_back'],
+    tempo: '85-95 RPM',
+    description: 'Postur sadel dan kayuhan lingkaran 360 derajat untuk tenaga maksimal tanpa nyeri lutut atau pinggang.',
+    descriptionEn: 'Optimal saddle fit and 360-degree pedal stroke circular efficiency.',
+    setupSteps: [
+      'Sesuaikan tinggi sadel sehingga lutut menekuk 25-35 derajat saat pedal berada di titik terendah (titik jam 6).',
+      'Posisikan bola telapak kaki tepat di atas as pedal sepeda.',
+      'Pegang handlebar dengan siku sedikit tertekuk lemas (jangan terkunci lurus).'
+    ],
+    executionSteps: [
+      'Kayuh pedal dalam lingkaran penuh: dorong ke bawah (jam 1-5), kikis ke belakang (jam 5-7), dan angkat ringan (jam 8-11).',
+      'Jaga putaran kayuhan (cadence) stabil pada kisaran 85-95 rotasi per menit (RPM).',
+      'Gunakan gigi (gear) ringan dengan putaran cepat daripada gigi berat yang membebani sendi lutut.',
+      'Rilekskan leher dan variasikan posisi pegangan tangan tiap 15 menit.'
+    ],
+    commonMistakes: [
+      'Sadel terlalu rendah sehingga lutut tertekuk tajam dan memicu nyeri tempurung lutut (patella).',
+      'Menginjak pedal dengan tumit bukan bola kaki.',
+      'Mengayuh dengan lutut melebar keluar menyerupai katak.'
+    ],
+    proTips: [
+      'Fokus pada putaran kayuhan yang mulus menyerupai menyeka lumpur dari bawah sepatu.',
+      'Minum seteguk air setiap 15-20 menit bersepeda.'
+    ],
+    animationType: 'cycling',
+    videoUrl: '/media/cycling.mp4',
+    posterUrl: '/media/cycling-poster.jpg',
+  },
+  {
+    id: 'freestyle-swimming',
+    name: 'Renang Gaya Bebas',
+    nameEn: 'Freestyle Swimming & Catch',
+    category: 'Sepeda & Renang',
+    difficulty: 'Menengah',
+    primaryMuscles: ['lats', 'shoulders'],
+    secondaryMuscles: ['abs', 'glutes', 'triceps'],
+    tempo: 'Streamline Stroke',
+    description: 'Teknik renang gaya bebas dengan tarikan high-elbow catch, streamline horizontal minim hambatan air, dan rotasi pernapasan bilateral.',
+    descriptionEn: 'Efficient freestyle swimming with high-elbow catch, hydro-streamline glide, and bilateral breathing.',
+    setupSteps: [
+      'Posisikan tubuh horizontal sejajar permukaan air (streamline body).',
+      'Arahkan pandangan ke dasar kolam agar kepala tidak mendongak ke atas.',
+      'Kunci otot perut dan bokong agar kaki tidak tenggelam terseret arus.'
+    ],
+    executionSteps: [
+      'Jangkaukan tangan ke depan lurus dan masuk ke air dengan ujung jari terlebih dahulu.',
+      'Lakukan high-elbow catch: tekuk siku dan tarik air ke belakang menggunakan lengan bawah seperti dayung.',
+      'Putar tubuh (body roll) 45 derajat dari panggul saat melakukan tarikan lengan.',
+      'Tolehkan kepala sedikit ke samping saat tubuh berputar untuk mengambil satu napas cepat, lalu hembuskan dalam air.'
+    ],
+    commonMistakes: [
+      'Kepala mendongak ke depan yang menyebabkan panggul dan kaki langsung tenggelam.',
+      'Siku melorot (dropped elbow) saat menarik air sehingga daya dorong berkurang drastis.',
+      'Menendang kaki dari lutut menyerupai bersepeda alih-alih dari sendi panggul.'
+    ],
+    proTips: [
+      'Kekuatan tendangan renang berasal dari panggul dengan pergelangan kaki yang lemas lentur.',
+      'Hembuskan napas secara kontinu dan halus di dalam air agar paru-paru siap menghirup udara baru saat menoleh.'
+    ],
+    animationType: 'swimming',
+    videoUrl: '/media/swimming.mp4',
+    posterUrl: '/media/swimming-poster.jpg',
   }
 ];

@@ -15,7 +15,10 @@ import {
   CheckCircle2,
   Volume2,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Timer,
+  MousePointerClick,
+  Wind
 } from 'lucide-react';
 
 interface FatBurnerPageProps {
@@ -45,6 +48,8 @@ export const FatBurnerPage: React.FC<FatBurnerPageProps> = ({
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [sessionElapsedSec, setSessionElapsedSec] = useState<number>(0);
   const [showCompletionModal, setShowCompletionModal] = useState<boolean>(false);
+  const [progressionMode, setProgressionMode] = useState<'timer' | 'manual' | 'clicker'>('timer');
+  const [clickerRepCount, setClickerRepCount] = useState<number>(0);
 
   // Auto-launch if triggered from Mastermind or Quick Action
   useEffect(() => {
@@ -309,8 +314,8 @@ export const FatBurnerPage: React.FC<FatBurnerPageProps> = ({
               : 'bg-gradient-to-b from-[#251006] via-[#1F0C05] to-[#0A0605]' // WORK ORANGE
           }`}
         >
-          {/* Top Bar */}
-          <div className="flex items-center justify-between">
+          {/* Top Bar with Mode Switcher */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className={`text-xs font-black uppercase px-3 py-1 rounded-full ${
                 currentInterval.isRest
@@ -324,6 +329,36 @@ export const FatBurnerPage: React.FC<FatBurnerPageProps> = ({
               </span>
             </div>
 
+            {/* Set Progression Mode Switcher */}
+            <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-white/10 text-xs">
+              {[
+                { id: 'timer', label: 'Detik Otomatis', icon: Timer },
+                { id: 'manual', label: 'Langsung Next', icon: Zap },
+                { id: 'clicker', label: 'Ketuk Repetisi', icon: MousePointerClick },
+              ].map((mode) => {
+                const Icon = mode.icon;
+                return (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    onClick={() => {
+                      setProgressionMode(mode.id as any);
+                      setClickerRepCount(0);
+                    }}
+                    className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 ${
+                      progressionMode === mode.id
+                        ? 'bg-orange-500 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <Icon size={12} />
+                    {mode.label}
+                  </button>
+                );
+              })}
+            </div>
+
             <button
               onClick={handleClosePlayer}
               className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all"
@@ -333,16 +368,24 @@ export const FatBurnerPage: React.FC<FatBurnerPageProps> = ({
           </div>
 
           {/* Center Main Stage (Giant Timer & Exercise Name) */}
-          <div className="flex flex-col items-center justify-center text-center my-auto py-8">
+          <div className="flex flex-col items-center justify-center text-center my-auto py-6">
             <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight mb-2">
               {currentInterval.name}
             </h2>
-            <p className="text-xs sm:text-sm text-slate-300 max-w-md px-4 mb-8">
+            <p className="text-xs sm:text-sm text-slate-300 max-w-md px-4 mb-4">
               {currentInterval.instruction}
             </p>
 
+            {/* Active Rest Recovery Guide Cue */}
+            {currentInterval.isRest && (
+              <div className="mb-4 px-4 py-2 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-xs text-blue-300 flex items-center gap-2 animate-pulse">
+                <Wind className="w-4 h-4 text-blue-400" />
+                <span>Panduan Gerak Istirahat: Jalan santai di tempat, ayunkan tangan lemas, ambil napas dalam</span>
+              </div>
+            )}
+
             {/* Giant Circular Countdown */}
-            <div className="relative w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center">
+            <div className="relative w-60 h-60 sm:w-72 sm:h-72 flex items-center justify-center">
               <div className={`absolute inset-0 rounded-full blur-2xl opacity-30 ${
                 currentInterval.isRest ? 'bg-blue-500' : 'bg-orange-500'
               }`} />
@@ -358,9 +401,38 @@ export const FatBurnerPage: React.FC<FatBurnerPageProps> = ({
               </div>
             </div>
 
+            {/* Rep Clicker Mode Button when in Clicker Mode during Work */}
+            {progressionMode === 'clicker' && !currentInterval.isRest && (
+              <div className="mt-5 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = clickerRepCount + 1;
+                    setClickerRepCount(next);
+                    audioSynth.playCountdownTick();
+                  }}
+                  className="px-6 py-3 rounded-2xl bg-orange-500 hover:bg-orange-400 active:scale-95 text-slate-950 font-black text-sm flex items-center gap-2 shadow-xl shadow-orange-500/30 transition-all"
+                  style={{ cursor: 'pointer' }}
+                >
+                  <MousePointerClick size={18} />
+                  <span>Ketuk Repetisi ({clickerRepCount} Reps)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setClickerRepCount(0);
+                    handleSkipNext();
+                  }}
+                  className="px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs"
+                >
+                  Selesai Set
+                </button>
+              </div>
+            )}
+
             {/* Up Next Preview Pill */}
             {nextInterval && (
-              <div className="mt-8 px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-xs text-slate-300 flex items-center gap-2">
+              <div className="mt-6 px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-xs text-slate-300 flex items-center gap-2">
                 <span className="text-slate-400 font-medium">Berikutnya:</span>
                 <strong className="text-white font-bold">{nextInterval.name}</strong>
                 <span className="font-mono text-slate-400">({nextInterval.durationSeconds}s)</span>

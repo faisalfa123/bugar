@@ -3,6 +3,7 @@ import { WorkoutLog, CardioLog, UserProfile } from '../types';
 import { audioSynth } from '../services/audioSynth';
 import { EXERCISE_GUIDES, ExerciseGuide } from '../data/exerciseGuides';
 import { ExerciseFormPlayer } from '../components/ExerciseFormPlayer';
+import { ActiveRecoveryGuide } from '../components/ActiveRecoveryGuide';
 import {
   Dumbbell,
   Play,
@@ -15,7 +16,9 @@ import {
   Compass,
   ArrowRight,
   ChevronDown,
-  RotateCcw
+  RotateCcw,
+  Zap,
+  MousePointerClick
 } from 'lucide-react';
 
 interface WorkoutPageProps {
@@ -77,7 +80,9 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({
     sets: { set_number: number; weight_kg: number; reps: number; completed: boolean; is_pr?: boolean }[];
   }[]>([]);
 
-  // Rest Timer State
+  // Rest Timer & Progression Mode State ('manual' = Langsung Next, 'timer' = Detik Otomatis, 'clicker' = Ketuk Repetisi)
+  const [progressionMode, setProgressionMode] = useState<'manual' | 'timer' | 'clicker'>('timer');
+  const [currentRepClickCount, setCurrentRepClickCount] = useState<number>(0);
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
   const [initialRestDuration, setInitialRestDuration] = useState<number>(90);
 
@@ -160,11 +165,46 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({
           targetSet.is_pr = true;
         }
 
-        // Start Auto-Rest Timer
-        setRestSeconds(initialRestDuration);
+        // Progression mode handling
+        setCurrentRepClickCount(0);
+        if (progressionMode === 'manual') {
+          setRestSeconds(null);
+        } else {
+          setRestSeconds(initialRestDuration);
+        }
       }
       return copy;
     });
+  };
+
+  // Find currently active (first uncompleted) set for the clicker interface
+  const getActiveUncompletedSet = () => {
+    for (let exIdx = 0; exIdx < activeExercises.length; exIdx++) {
+      for (let setIdx = 0; setIdx < activeExercises[exIdx].sets.length; setIdx++) {
+        if (!activeExercises[exIdx].sets[setIdx].completed) {
+          return {
+            exIdx,
+            setIdx,
+            exerciseName: activeExercises[exIdx].name,
+            set: activeExercises[exIdx].sets[setIdx],
+          };
+        }
+      }
+    }
+    return null;
+  };
+
+  const handleClickerAddRep = () => {
+    const activeInfo = getActiveUncompletedSet();
+    if (!activeInfo) return;
+
+    const nextCount = currentRepClickCount + 1;
+    setCurrentRepClickCount(nextCount);
+    audioSynth.playCountdownTick();
+
+    if (nextCount >= activeInfo.set.reps) {
+      handleToggleSetComplete(activeInfo.exIdx, activeInfo.setIdx);
+    }
   };
 
   const handleFinishWorkout = () => {
@@ -381,23 +421,112 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({
                 </button>
               </div>
 
-              {/* Rest timer preset selector */}
-              <div className="flex items-center gap-2 py-3 text-xs border-b border-slate-800/60">
-                <span className="text-slate-400 font-medium">Auto-Rest Preset:</span>
-                {[60, 90, 120].map(s => (
-                  <button
-                    key={s}
-                    onClick={() => setInitialRestDuration(s)}
-                    className={`px-2 py-0.5 rounded-md border text-[11px] ${
-                      initialRestDuration === s
-                        ? 'bg-blue-600 text-white border-blue-500 font-bold'
-                        : 'bg-slate-900 text-slate-400 border-slate-800'
-                    }`}
-                  >
-                    {s}s
-                  </button>
-                ))}
+              {/* Progression Mode Switcher */}
+              <div className="py-3 border-b border-slate-800/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                  <span className="text-[10px] text-slate-400 font-semibold px-2">Mode Set:</span>
+                  {[
+                    { id: 'manual', label: 'Langsung Next', icon: Zap },
+                    { id: 'timer', label: 'Detik Otomatis', icon: Timer },
+                    { id: 'clicker', label: 'Ketuk Repetisi', icon: MousePointerClick },
+                  ].map((mode) => {
+                    const Icon = mode.icon;
+                    return (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => {
+                          setProgressionMode(mode.id as any);
+                          setCurrentRepClickCount(0);
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                          progressionMode === mode.id
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <Icon size={12} />
+                        {mode.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Rest timer preset selector (when in timer mode) */}
+                {progressionMode === 'timer' && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate-400 text-[11px] font-medium">Jeda:</span>
+                    {[45, 60, 90, 120].map(s => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setInitialRestDuration(s)}
+                        className={`px-2 py-0.5 rounded-md border text-[11px] font-mono ${
+                          initialRestDuration === s
+                            ? 'bg-blue-600 text-white border-blue-500 font-bold'
+                            : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                        }`}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {s}s
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
+
+              {/* Active Recovery Floating Card during Rest */}
+              {restSeconds !== null && restSeconds > 0 && (
+                <div className="my-4">
+                  <ActiveRecoveryGuide
+                    remainingSeconds={restSeconds}
+                    totalSeconds={initialRestDuration}
+                    nextExerciseName={getActiveUncompletedSet()?.exerciseName}
+                    nextSetInfo={getActiveUncompletedSet() ? `Set ${getActiveUncompletedSet()!.set.set_number} • ${getActiveUncompletedSet()!.set.weight_kg}kg` : undefined}
+                    onSkipRest={() => setRestSeconds(null)}
+                    onAdjustSeconds={(delta) => setRestSeconds(prev => Math.max(5, (prev || 0) + delta))}
+                  />
+                </div>
+              )}
+
+              {/* Rep Clicker Banner when in Clicker Mode & not resting */}
+              {progressionMode === 'clicker' && (restSeconds === null || restSeconds <= 0) && getActiveUncompletedSet() && (
+                <div className="my-4 p-4 rounded-3xl bg-gradient-to-r from-blue-950/40 via-slate-900 to-slate-900 border border-blue-500/40 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+                  <div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 uppercase tracking-wider">
+                      Penghitung Repetisi Aktif
+                    </span>
+                    <h3 className="text-base font-black text-white mt-1">
+                      {getActiveUncompletedSet()!.exerciseName} (Set {getActiveUncompletedSet()!.set.set_number})
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Beban: <strong className="text-white font-mono">{getActiveUncompletedSet()!.set.weight_kg} kg</strong> • Target: <strong className="text-emerald-400 font-mono">{getActiveUncompletedSet()!.set.reps} Reps</strong>
+                    </p>
+                  </div>
+
+                  {/* Big Tap Clicker Button */}
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleClickerAddRep}
+                      className="px-6 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-black text-base shadow-xl shadow-blue-600/30 flex items-center gap-3 transition-all"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <MousePointerClick size={22} className="animate-bounce" />
+                      <span>Ketuk Tiap Rep ({currentRepClickCount} / {getActiveUncompletedSet()!.set.reps})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSetComplete(getActiveUncompletedSet()!.exIdx, getActiveUncompletedSet()!.setIdx)}
+                      className="px-3 py-4 rounded-2xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs font-bold border border-emerald-500/30"
+                      title="Selesaikan Langsung Set Ini"
+                    >
+                      Selesai
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Exercises Sets Logger */}
               <div className="space-y-5 mt-4">

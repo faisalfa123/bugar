@@ -9,7 +9,7 @@ export const ExerciseGuidePage: React.FC = () => {
   const [activeGuide, setActiveGuide] = useState<ExerciseGuide>(EXERCISE_GUIDES[0]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const categories = ['Semua', 'Dada', 'Kaki', 'Punggung', 'Core', 'Lengan'];
+  const categories = ['Semua', 'Dada', 'Kaki', 'Punggung', 'Core', 'Lengan', 'Kardio & Lari', 'Senam & Fleksibilitas', 'Sepeda & Renang'];
 
   const filteredGuides = EXERCISE_GUIDES.filter((g) => {
     const matchesSearch = g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
